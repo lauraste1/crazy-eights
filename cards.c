@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdbool.h>
 
 typedef struct node {
     int data;
@@ -85,27 +86,36 @@ char *showCard(int num) {
     char cardname[25], c[6]="clubs", d[10]="diamonds", h[7]="hearts", s[7]="spades";
     if (num / 13 < 1) {
         char *name=cardName(cardname, rank, c);
-        printf("%s\n", name);
         return name;
     } else if (num / 13 == 1) {
         char *name=cardName(cardname, rank, d);
-        printf("%s\n", name);
         return name;
     } else if (num / 13 == 2) {
         char *name=cardName(cardname, rank, h);
-        printf("%s\n", name);
         return name;
     } else {
         char *name=cardName(cardname, rank, s);
-        printf("%s\n", name);
         return name;
     }
+}
+
+//check if hand has any cards that can be played
+bool checkHand(NodeT *head, int n) {
+    NodeT *p;
+    for (p=head; p!=NULL; p=p->next) {
+        if (n % 13 == p->data % 13) {
+            return true;
+        } else if (n / 13 == p->data / 13) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void printCards(NodeT *head) {
     NodeT* curr = head;
     while (curr->next != NULL) {
-        showCard(curr->data);
+        printf("%s\n", showCard(curr->data));
         curr=curr->next;
     }
 }
@@ -158,27 +168,37 @@ int main() {
         deleteNode(&head, curr->data);
         curr=curr->next;
     }
-
+    
     printf("\nThe first hand is\n");
     printCards(handone_head);
     printf("\nThe second hand is\n");
     printCards(handtwo_head);
     printf("\nThe new linked list is\n");
     printLinkedList(head);
-
+    
     //create a discard plie
     printf("\nThe first card is ");
+    printf("%s\n", showCard(head->data));
     int base=head->data;
-    showCard(head->data);
-    printf("%d\n", base);
-    NodeT *discard;
     deleteNode(&head, head->data);
-    printf("Please choose a card that is of the same rank or suit to discard\n");
-    char throw[50];
-
+    NodeT *discard=createNode(base);
+    bool right1=checkHand(handone_head, base);
+    //bool right2=checkHand(handtwo_head, base);
+    if (right1==true) {
+        printf("Hand one contains a card you could play\n");
+    } else {
+        printf("You must pick up a card\n");
+        printf("Here it is: %s\n", showCard(head->data));
+        insertNode(handone_head, head->data);
+        deleteNode(&head, head->data);
+    }
+    
+    //printf("Please choose a card that is of the same rank or suit to discard\n");
+    //char throw[50];
+    
     //scanf("%s", &*throw)
     //readCard(throw[0]);
-
+    
     //free memory for hands, pick up and discard piles
     freeLL(handone_head);
     freeLL(handtwo_head);
