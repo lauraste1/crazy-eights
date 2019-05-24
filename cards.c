@@ -2,49 +2,12 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <string.h>
+#include <time.h>
+#include "linkedlist.h"
 
-typedef struct node {
-    int data;
-    struct node *next;
-} NodeT;
-
-struct linkedList {
-    NodeT *head;
-    int size;
-};
-
-NodeT *createNode(int val) {
-    NodeT *new_node = malloc(sizeof(NodeT));
-    assert(new_node != NULL);
-    new_node->data=val;
-    new_node->next=NULL;
-    return new_node;
-}
-
-NodeT *insertNode(NodeT *head, int val) {
-    NodeT *new_head = createNode(val);
-    new_head->next=head;
-    head=new_head;
-    return new_head;
-}
-
-void deleteNode(NodeT **head, int val) {
-    if (head == NULL) {
-        return;
-    }
-    NodeT *curr = *head;
-    if (curr->data==val) {
-        *head=curr->next;
-        free(curr);
-        return;
-    }
-    while (curr->next != NULL) {
-        if (curr->next->data == val) {
-            curr->next=curr->next->next;
-            return;
-        }
-    }
-}
+#define LINE_LENGTH 1024
+#define ERROR_NO 222
 
 char *showRank(int num) {
     if (num % 13==0) {
@@ -99,6 +62,24 @@ char *showCard(int num) {
     }
 }
 
+
+//check if card can be played
+int checkCard(NodeT *head, int pos, int disc) {
+    NodeT *p;
+    int n=0;
+    for (p=head; p!=NULL; p=p->next) {
+        n++;
+        if (n==pos) {
+           if (p->data % 13 == disc % 13) {
+               return p->data;
+           } else if (p->data / 13 == disc / 13) {
+               return p->data;
+           }
+        }
+    }
+    return ERROR_NO;
+}
+
 //check if hand has any cards that can be played
 bool checkHand(NodeT *head, int n) {
     NodeT *p;
@@ -114,33 +95,43 @@ bool checkHand(NodeT *head, int n) {
 
 void printCards(NodeT *head) {
     NodeT* curr = head;
+    int i=1;
     while (curr->next != NULL) {
-        printf("%s\n", showCard(curr->data));
+        printf("%d %s\n", i, showCard(curr->data));
         curr=curr->next;
+        i++;
     }
 }
 
-void printLinkedList(NodeT *head) {
-    NodeT *curr = head;
-    while (curr->next != NULL) {
-        printf("%d -- ", curr->data);
-        curr=curr->next;
-    }
-    printf("%d\n", curr->data);
+//confirm input is valid int
+int readInt(void) {
+    char input[LINE_LENGTH];
+    int  n;
+    fgets(input, LINE_LENGTH, stdin);
+    if ( (sscanf(input, "%d", &n) != 1) || n < 0 )
+        return ERROR_NO;
+    else
+        return n;
 }
 
-void freeLL(NodeT *head) {
-    NodeT *temp;
-    while (head != NULL) {
-        temp=head;
-        head=head->next;
-        free(temp);
-    }
+int checkValidCard(void) {
+    int card;
+    int exit=0;
+    printf("Please choose a card that is of the same rank or suit to discard\n");
+    do {
+        card=readInt();
+        if ((card!=ERROR_NO) && (card>=0) && (card<=52)) {
+            exit=1;
+        } else {
+            printf("Wrong card. Try again");
+        }
+    } while (exit==0);
+    return 0;
 }
 
 int main() {
     //generate random seed and perform Fisher-Yates shuffle
-    srand(3484773);
+    srand(time(0));
     int cardnumbers[52];
     for (int a=0; a<52; a++) {
         cardnumbers[a]=a;
@@ -168,14 +159,14 @@ int main() {
         deleteNode(&head, curr->data);
         curr=curr->next;
     }
-    
+
     printf("\nThe first hand is\n");
     printCards(handone_head);
     printf("\nThe second hand is\n");
     printCards(handtwo_head);
     printf("\nThe new linked list is\n");
     printLinkedList(head);
-    
+
     //create a discard plie
     printf("\nThe first card is ");
     printf("%s\n", showCard(head->data));
@@ -183,25 +174,39 @@ int main() {
     deleteNode(&head, head->data);
     NodeT *discard=createNode(base);
     bool right1=checkHand(handone_head, base);
+
     //bool right2=checkHand(handtwo_head, base);
     if (right1==true) {
         printf("Hand one contains a card you could play\n");
+        printf("Please choose a card that is of the same rank or suit to discard\n");
+        int k;
+        scanf("%d", &k);
+
+        int m=checkCard(handone_head, k, base);
+        //if card entered is same suit or rank add to discard pile
+        if (m!=ERROR_NO) {
+            insertNode(discard, m);
+            deleteNode(&handone_head, m);
+            base=m;
+        } else {
+            printf("Wrong card. Try again\n");
+        }
     } else {
         printf("You must pick up a card\n");
-        printf("Here it is: %s\n", showCard(head->data));
-        insertNode(handone_head, head->data);
-        deleteNode(&head, head->data);
+        do {
+            printf("Here it is: %s\n", showCard(head->data));
+            insertNode(handone_head, head->data);
+            deleteNode(&head, head->data);
+        } while ((head->data / 13 != base/13) && (head->data % 13 != base % 13));
     }
-    
-    //printf("Please choose a card that is of the same rank or suit to discard\n");
-    //char throw[50];
-    
+
     //scanf("%s", &*throw)
     //readCard(throw[0]);
-    
+
     //free memory for hands, pick up and discard piles
     freeLL(handone_head);
     freeLL(handtwo_head);
+    freeLL(discard);
     freeLL(head);
     return 0;
 }
