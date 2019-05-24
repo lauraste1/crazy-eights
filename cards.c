@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
-#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 #include "linkedlist.h"
@@ -81,16 +79,16 @@ int checkCard(NodeT *head, int pos, int disc) {
 }
 
 //check if hand has any cards that can be played
-bool checkHand(NodeT *head, int n) {
+int checkHand(NodeT *head, int n) {
     NodeT *p;
     for (p=head; p!=NULL; p=p->next) {
         if (n % 13 == p->data % 13) {
-            return true;
+            return 0;
         } else if (n / 13 == p->data / 13) {
-            return true;
+            return 0;
         }
     }
-    return false;
+    return 1;
 }
 
 void printCards(NodeT *head) {
@@ -114,19 +112,21 @@ int readInt(void) {
         return n;
 }
 
-int checkValidCard(void) {
-    int card;
+int checkValidCard(NodeT *hand, int base) {
     int exit=0;
+    int position;
+    int m;
     printf("Please choose a card that is of the same rank or suit to discard\n");
     do {
-        card=readInt();
-        if ((card!=ERROR_NO) && (card>=0) && (card<=52)) {
+        position=readInt();
+        if ((position!=ERROR_NO)) {
+            m=checkCard(hand, position, base);
             exit=1;
         } else {
             printf("Wrong card. Try again");
         }
     } while (exit==0);
-    return 0;
+    return m;
 }
 
 int main() {
@@ -173,18 +173,14 @@ int main() {
     int base=head->data;
     deleteNode(&head, head->data);
     NodeT *discard=createNode(base);
-    bool right1=checkHand(handone_head, base);
+    int right1=checkHand(handone_head, base);
 
-    //bool right2=checkHand(handtwo_head, base);
-    if (right1==true) {
+    if (right1==0) {
         printf("Hand one contains a card you could play\n");
-        printf("Please choose a card that is of the same rank or suit to discard\n");
-        int k;
-        scanf("%d", &k);
-
-        int m=checkCard(handone_head, k, base);
+        int m=checkValidCard(handone_head, base);
         //if card entered is same suit or rank add to discard pile
         if (m!=ERROR_NO) {
+            printf("Good choice!\n");
             insertNode(discard, m);
             deleteNode(&handone_head, m);
             base=m;
@@ -200,9 +196,6 @@ int main() {
         } while ((head->data / 13 != base/13) && (head->data % 13 != base % 13));
     }
 
-    //scanf("%s", &*throw)
-    //readCard(throw[0]);
-
     //free memory for hands, pick up and discard piles
     freeLL(handone_head);
     freeLL(handtwo_head);
@@ -210,3 +203,15 @@ int main() {
     freeLL(head);
     return 0;
 }
+
+/* do {
+    int right1=checkHand(handone_head, base);
+    int right2=checkHand(handtwo_head, base);
+    if (right1==0) {
+        checkValidCard(handone_head, base);
+    } else {
+
+
+    }
+} while ((handone.size > 0)||(handtwo.size > 0))
+*/

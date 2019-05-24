@@ -7,6 +7,11 @@ typedef struct node {
     struct node *next;
 } NodeT;
 
+typedef struct listr {
+    int size;
+    NodeT *head;
+} listr
+
 NodeT *createNode(int val) {
     NodeT *new_node = malloc(sizeof(NodeT));
     assert(new_node != NULL);
