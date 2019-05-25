@@ -7,10 +7,20 @@ typedef struct node {
     struct node *next;
 } NodeT;
 
-typedef struct listr {
+typedef struct listrep {
     int size;
     NodeT *head;
-} listr
+} listrep;
+
+typedef struct listrep *List;
+
+List newLL() {
+   List L = malloc(sizeof(listrep));
+   assert(L != NULL);
+   L->size = 0;
+   L->head = NULL;
+   return L;
+}
 
 NodeT *createNode(int val) {
     NodeT *new_node = malloc(sizeof(NodeT));
@@ -20,33 +30,37 @@ NodeT *createNode(int val) {
     return new_node;
 }
 
-NodeT *insertNode(NodeT *head, int val) {
+NodeT *insertNode(List listr, int val) {
     NodeT *new_head = createNode(val);
-    new_head->next=head;
-    head=new_head;
+    new_head->next=listr->head;
+    listr->head=new_head;
+    listr->size++;
     return new_head;
 }
 
-void deleteNode(NodeT **head, int val) {
-    if (head == NULL) {
+void deleteNode(List listr, int val) {
+    if (listr->head == NULL) {
         return;
     }
-    NodeT *curr = *head;
+    NodeT *curr = listr->head;
     if (curr->data==val) {
-        *head=curr->next;
+        listr->head=curr->next;
         free(curr);
+        listr->size--;
         return;
     }
     while (curr->next != NULL) {
         if (curr->next->data == val) {
             curr->next=curr->next->next;
+            free(curr->next);
+            listr->size--;
             return;
         }
     }
 }
 
-void printLinkedList(NodeT *head) {
-    NodeT *curr = head;
+void printLinkedList(List listr) {
+    NodeT *curr = listr->head;
     while (curr->next != NULL) {
         printf("%d -- ", curr->data);
         curr=curr->next;
@@ -54,11 +68,12 @@ void printLinkedList(NodeT *head) {
     printf("%d\n", curr->data);
 }
 
-void freeLL(NodeT *head) {
+void freeLL(List listr) {
     NodeT *temp;
-    while (head != NULL) {
-        temp=head;
-        head=head->next;
+    while (listr->head != NULL) {
+        temp=listr->head;
+        listr->head=listr->head->next;
         free(temp);
     }
+    free(listr);
 }

@@ -2,10 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include "linkedlist.h"
+#include "linkedlist.c"
 
 #define LINE_LENGTH 1024
 #define ERROR_NO 222
+
+typedef struct listrep *List;
 
 char *showRank(int num) {
     if (num % 13==0) {
@@ -62,10 +64,10 @@ char *showCard(int num) {
 
 
 //check if card can be played
-int checkCard(NodeT *head, int pos, int disc) {
+int checkCard(List listr, int pos, int disc) {
     NodeT *p;
     int n=0;
-    for (p=head; p!=NULL; p=p->next) {
+    for (p=listr->head; p!=NULL; p=p->next) {
         n++;
         if (n==pos) {
            if (p->data % 13 == disc % 13) {
@@ -79,9 +81,9 @@ int checkCard(NodeT *head, int pos, int disc) {
 }
 
 //check if hand has any cards that can be played
-int checkHand(NodeT *head, int n) {
+int checkHand(List listr, int n) {
     NodeT *p;
-    for (p=head; p!=NULL; p=p->next) {
+    for (p=listr->head; p!=NULL; p=p->next) {
         if (n % 13 == p->data % 13) {
             return 0;
         } else if (n / 13 == p->data / 13) {
@@ -91,8 +93,8 @@ int checkHand(NodeT *head, int n) {
     return 1;
 }
 
-void printCards(NodeT *head) {
-    NodeT* curr = head;
+void printCards(List listr) {
+    NodeT* curr = listr->head;
     int i=1;
     while (curr->next != NULL) {
         printf("%d %s\n", i, showCard(curr->data));
@@ -112,7 +114,7 @@ int readInt(void) {
         return n;
 }
 
-int checkValidCard(NodeT *hand, int base) {
+int checkValidCard(List hand, int base) {
     int exit=0;
     int position;
     int m;
@@ -143,46 +145,50 @@ int main() {
         cardnumbers[51]=temp;
     }
     //convert shuffled array to linked list
-    NodeT *head=createNode(cardnumbers[0]);
+    List deck=newLL();
+    insertNode(deck, cardnumbers[0]);
     for (int j=1; j<52; j++) {
-        head=insertNode(head, cardnumbers[j]);
+        insertNode(deck, cardnumbers[j]);
     }
-    printLinkedList(head);
+    printLinkedList(deck);
+    List handone=newLL();
+    List handtwo=newLL();
     //deal two hands of seven cards
-    NodeT *curr=head, *handone_head, *handtwo_head;
+    NodeT *curr;
     for (int k=0; k<16; k++) {
         if (k % 2==0) {
-            handone_head=insertNode(handone_head, curr->data);
+            insertNode(handone, curr->data);
         } else {
-            handtwo_head=insertNode(handtwo_head, curr->data);;
+            insertNode(handtwo, curr->data);;
         }
-        deleteNode(&head, curr->data);
+        deleteNode(deck, curr->data);
         curr=curr->next;
     }
 
     printf("\nThe first hand is\n");
-    printCards(handone_head);
+    printCards(handone);
     printf("\nThe second hand is\n");
-    printCards(handtwo_head);
+    printCards(handtwo);
     printf("\nThe new linked list is\n");
-    printLinkedList(head);
+    printLinkedList(deck);
 
     //create a discard plie
     printf("\nThe first card is ");
-    printf("%s\n", showCard(head->data));
-    int base=head->data;
-    deleteNode(&head, head->data);
-    NodeT *discard=createNode(base);
-    int right1=checkHand(handone_head, base);
+    printf("%s\n", showCard(deck->head->data));
+    int base=deck->head->data;
+    deleteNode(deck, deck->head->data);
+    List discard=newLL();
+    insertNode(discard, base);
+    int right1=checkHand(handone, base);
 
     if (right1==0) {
         printf("Hand one contains a card you could play\n");
-        int m=checkValidCard(handone_head, base);
+        int m=checkValidCard(handone, base);
         //if card entered is same suit or rank add to discard pile
         if (m!=ERROR_NO) {
             printf("Good choice!\n");
             insertNode(discard, m);
-            deleteNode(&handone_head, m);
+            deleteNode(handone, m);
             base=m;
         } else {
             printf("Wrong card. Try again\n");
@@ -190,17 +196,17 @@ int main() {
     } else {
         printf("You must pick up a card\n");
         do {
-            printf("Here it is: %s\n", showCard(head->data));
-            insertNode(handone_head, head->data);
-            deleteNode(&head, head->data);
-        } while ((head->data / 13 != base/13) && (head->data % 13 != base % 13));
+            printf("Here it is: %s\n", showCard(deck->head->data));
+            insertNode(handone, deck->head->data);
+            deleteNode(deck, deck->head->data);
+        } while ((deck->head->data / 13 != base/13) && (deck->head->data % 13 != base % 13));
     }
 
     //free memory for hands, pick up and discard piles
-    freeLL(handone_head);
-    freeLL(handtwo_head);
+    freeLL(handone);
+    freeLL(handtwo);
     freeLL(discard);
-    freeLL(head);
+    freeLL(deck);
     return 0;
 }
 
