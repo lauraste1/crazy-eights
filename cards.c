@@ -9,6 +9,21 @@
 
 typedef struct listrep *List;
 
+char *findSuit(int num) {
+    if (num==0) {
+        return "hearts";
+    }
+    else if (num==1) {
+        return "diamonds";
+    }
+    else if (num==2) {
+        return "hearts";
+    }
+    else {
+        return "spades";
+    }
+}
+
 char *showRank(int num) {
     if (num % 13==0) {
         return "ace";
@@ -70,11 +85,15 @@ int checkCard(List listr, int pos, int disc, int chosenSuit) {
     for (p=listr->head; p!=NULL; p=p->next) {
         n++;
         if (n==pos) {
+           if (p->data % 13 == 7) {
+               return p->data; //if player has a crazy 8
+           }
            if (p->data % 13 == disc % 13) {
                return p->data;
            }
+           //if previous player played a crazy 8
            if (chosenSuit!=-1) {
-               if (p->data / 13 == chosenSuit / 13) {
+               if (p->data / 13 == chosenSuit) {
                    return p->data;
                }
            } else {
@@ -91,6 +110,9 @@ int checkCard(List listr, int pos, int disc, int chosenSuit) {
 int checkHand(List listr, int n, int chosenSuit) {
     NodeT *p;
     for (p=listr->head; p!=NULL; p=p->next) {
+        if (p->data % 13 == 7) {
+            return 1; //if player has a crazy eight
+        }
         if (p->data % 13 == n % 13) {
             return 1;
         }
@@ -123,11 +145,22 @@ int readInt(void) {
     char input[LINE_LENGTH];
     int  n;
     fgets(input, LINE_LENGTH, stdin);
-    if ( (sscanf(input, "%d", &n) != 1) || n < 0 )
+    if ((sscanf(input, "%d", &n) != 1) || n < 0 )
         return ERROR_NO;
     else
         return n;
 }
+
+int readTxt() {
+    char input[LINE_LENGTH];
+    char k;
+    fgets(input, LINE_LENGTH, stdin);
+    if ((sscanf(input, "%c", &k)==1) && ((k=='Y') || (k=='y'))) {
+        return 1;
+    }
+    return ERROR_NO;
+}
+
 
 int checkValidCard(List hand, int base, int chosenSuit) {
     int exit=0;
@@ -136,7 +169,7 @@ int checkValidCard(List hand, int base, int chosenSuit) {
     do {
         position=readInt();
         m=checkCard(hand, position, base, chosenSuit);
-        if ((position!=ERROR_NO) && (m!=ERROR_NO)) {
+        if ((position != ERROR_NO) && (m != ERROR_NO)) {
             exit=1;
         } else {
             printf("Wrong card. Enter another card number:\n");
@@ -148,7 +181,6 @@ int checkValidCard(List hand, int base, int chosenSuit) {
 int move(int correct, List deck, List hand, int base, int chosenSuit) {
     int played;
     if (correct) {
-        printf("Please choose a card that is of the same rank or suit to discard\n");
         played=checkValidCard(hand, base, chosenSuit);
         return played;
     } else {
@@ -158,18 +190,24 @@ int move(int correct, List deck, List hand, int base, int chosenSuit) {
             insertNode(hand, deck->head->data);
             deleteNode(deck, deck->head->data);
         } while ((hand->head->data / 13 != base/13) && (hand->head->data % 13 != base % 13) && (hand->head->data % 13 != 7));
-        printf("The card on the top of your hand is %s\n", showCard(hand->head->data));
-        printf("The card on the top of the deck is %s\n", showCard(deck->head->data));
+        printf("You must play %s\n", showCard(hand->head->data));
+        int exit=0;
+        do {
+            printf("Type Y or y to confirm.\n");
+            if (readTxt()!=ERROR_NO) {
+               exit=1;
+            }
+        } while (exit==0);
         return hand->head->data;
     }
 }
 
 int pickSuit(void) {
-    printf("You have played a crazy eight! Choose a suit for the next player to play.");
+    printf("You have played a crazy eight! Choose a suit for the next player to play.\n");
     printf("1 clubs\n");
     printf("2 diamonds\n");
     printf("3 hearts\n");
-    printf("4 diamonds\n");
+    printf("4 spades\n");
     int exit=0;
     int chosensuit;
     do {
@@ -180,13 +218,13 @@ int pickSuit(void) {
             printf("That is not a suit. Please enter the number corresponding to a suit:\n");
         }
     } while (exit==0);
-    chosensuit-=chosensuit;
+    chosensuit-=1;
     return chosensuit;
 }
 
 int main() {
     //generate random seed and perform Fisher-Yates shuffle
-    srand(24455);
+    srand(time(0));
     int cardnumbers[52];
     for (int a=0; a<52; a++) {
         cardnumbers[a]=a;
@@ -202,7 +240,6 @@ int main() {
     for (int j=0; j<52; j++) {
         insertNode(deck, cardnumbers[j]);
     }
-    printLinkedList(deck);
     List handone=newLL();
     List handtwo=newLL();
     //deal two hands of seven cards
@@ -228,58 +265,75 @@ int main() {
     printf("The first card is ");
     printf("%s\n", showCard(deck->head->data));
     int base=deck->head->data;
-    int m;
     deleteNode(deck, deck->head->data);
     List discard=newLL();
     insertNode(discard, base);
+    int chosen=-1, right1, right2, m;
+    if (base % 13 == 7) {
+        printf("The first card is an eight. Player two must choose a suit for player one.\n");
+        chosen=pickSuit();
+        printf("Player one, you must play a card in the suit of %s or an eight of any suit.\n", findSuit(chosen));
+    } else {
+        printf("Player one, please choose a card that is of the same rank or suit as %s to discard or play an eight.\n", showCard(base));
+    }
+    right1=checkHand(handone, base, chosen);
+    m=move(right1, deck, handone, base, chosen);
+    insertNode(discard, m);
+    deleteNode(handone, m);
+    base=m;
+    printf("Now there are %d cards in player one's hand and %d in the discard pile.\n", handone->size, discard->size);
+    chosen=-1;
     do {
-        int chosen=-1;
-        int right1=checkHand(handone, base, chosen);
-        int right2=checkHand(handtwo, base, chosen);
-        m=move(right1, deck, handone, base, chosen);
-        printf("Good choice! %d\n", m);
-        insertNode(discard, m);
-        deleteNode(handone, m);
-        printf("Now there are %d cards in your hand and %d in the discard pile.\n", handone->size, discard->size);
-        base=m;
-
         //if player one plays a crazy eight
-        if (m % 13 == 7) {
-            chosen=pickSuit();
-            int crazyright2=checkHand(handtwo, base, chosen);
-            m=move(crazyright2, deck, handtwo, base, chosen);
-            chosen=-1; //revert to no preferred suit after player two counters
-        } else {
-            printf("Now choose a card that is the same suit or rank as %s\n", showCard(base));
-            printf("Your hand is:\n");
-            printCards(handtwo);
-            m=move(right2, deck, handtwo, base, chosen);
+        for (int n=0; n<15;n++) {
+            printf("\n");
         }
-        //insert the card into the discard pile and remove from player two's hand
-        printf("Good choice! %d\n", m);
+        if (m % 13 == 7) {
+            printf("Player one has played a crazy eight.\n");
+            chosen=pickSuit();
+            printf("Player two, your hand is:\n");
+            printCards(handtwo);
+            printf("Player two, you must play a card in the suit of %s or an eight of any suit.\n", findSuit(chosen));
+        } else {
+            printf("Player two, your hand is:\n");
+            printCards(handtwo);
+            printf("Player two, now choose a card that is the same suit or rank as %s\n or play an eight.\n", showCard(base));
+        }
+        right2=checkHand(handtwo, base, chosen);
+        m=move(right2, deck, handtwo, base, chosen);
         insertNode(discard, m);
         deleteNode(handtwo, m);
-        printf("Now there are %d cards in your hand and %d in the discard pile.\n", handtwo->size, discard->size);
+        printf("Now there are %d cards in player two's hand and %d in the discard pile.\n", handtwo->size, discard->size);
         base=m;
-        //check again
-        if (m % 13 == 7) {
-            chosen=pickSuit();
-            int crazyright1=checkHand(handone, base, chosen);
-            m=move(crazyright1, deck, handone, base, chosen);
-            chosen=-1;
-        } else {
-            right1=checkHand(handone, base, chosen);
-            printf("Now choose a card that is the same suit or rank as %s\n", showCard(base));
-            printf("Your hand is:\n");
-            printCards(handone);
-            m=move(right1, deck, handone, base, chosen);
+        chosen=-1;
+        for (int n=0; n<15;n++) {
+            printf("\n");
         }
-        printf("Good choice! %d\n", m);
+        //if player two plays a crazy eight
+        if (m % 13 == 7) {
+            printf("Player two has played a crazy eight.\n");
+            chosen=pickSuit();
+            printf("Player one, your hand is:\n");
+            printCards(handone);
+            printf("Player one, you must play a card in the suit of %s or an eight of any suit.\n", findSuit(chosen));
+        } else {
+            printf("Player one, your hand is:\n");
+            printCards(handone);
+            printf("Player one, now choose a card that is of the same rank or suit as %s to discard or play an eight.\n", showCard(base));
+        }
+        right1=checkHand(handone, base, chosen);
+        m=move(right1, deck, handone, base, chosen);
         insertNode(discard, m);
         deleteNode(handone, m);
-        printf("Now there are %d cards in your hand and %d in the discard pile.\n", handone->size, discard->size);
+        printf("Now there are %d cards in player one's hand and %d in the discard pile.\n", handone->size, discard->size);
         base=m;
+        chosen=-1;
     } while ((handone->size > 0) && (handtwo->size > 0));
+    if (handone->size==0) {
+        printf("Player one is the winner");
+    } else {
+        printf("Player two is the winner.");
+    }
     freeLL(handone);
     freeLL(handtwo);
     freeLL(discard);
